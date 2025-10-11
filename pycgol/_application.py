@@ -13,7 +13,7 @@ _SCREEN_HEIGHT: int = 720
 
 class Application:
 
-    def __init__(self) -> None:
+    def __init__(self, gol_updates_per_second: int = 10) -> None:
         pygame.init()
         self._manager = pygame_gui.UIManager((_SCREEN_WIDTH, _SCREEN_HEIGHT))
         self._ui = UI(_SCREEN_WIDTH, _SCREEN_HEIGHT, self._manager)
@@ -21,6 +21,10 @@ class Application:
 
         self._state = Glider.place((5, _SCREEN_HEIGHT // 10 - 5), self._state)
         self._clock = pygame.time.Clock()
+
+        # Game of Life update rate control
+        self._gol_update_interval = 1.0 / gol_updates_per_second
+        self._time_since_last_update = 0.0
 
     def run(self) -> None:
         running = True
@@ -33,8 +37,14 @@ class Application:
                 self._manager.process_events(event)
 
             self._manager.update(delta_t)
-                        
-            self._state = Model.next_state(self._state)
-            self._ui.render(self._state)
+
+            # Only update Game of Life state at configured rate
+            self._time_since_last_update += delta_t
+            if self._time_since_last_update >= self._gol_update_interval:
+                self._state = Model.next_state(self._state)
+                self._time_since_last_update = 0.0
+
+            fps = self._clock.get_fps()
+            self._ui.render(self._state, fps)
 
         pygame.quit()

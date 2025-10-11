@@ -14,21 +14,30 @@ class UI:
             manager = self._manager
         )
 
-    def render(self, state: State):
+    def render(self, state: State, fps: float = 0.0):
         self._screen.fill("black")
 
         rectangle_width = self._screen.get_width() / state.width
         rectangle_height = self._screen.get_height() / state.height
 
+        # Only draw alive cells (much faster than drawing all cells)
         for y in range(state.height):
             for x in range(state.width):
-                pygame.draw.rect(
-                    self._screen,
-                    "white" if state[x,y] else "black",
-                    pygame.Rect(x * rectangle_width, y * rectangle_height, 
-                                rectangle_width, rectangle_height)
-                )
-        
+                if state[x, y]:
+                    pygame.draw.rect(
+                        self._screen,
+                        "white",
+                        pygame.Rect(x * rectangle_width, y * rectangle_height,
+                                    rectangle_width, rectangle_height)
+                    )
+
+        # Render FPS counter in top right corner
+        font = pygame.font.Font(None, 36)
+        fps_text = font.render(f"FPS: {fps:.1f}", True, (0, 255, 0))
+        fps_rect = fps_text.get_rect()
+        fps_rect.topright = (self._screen.get_width() - 10, 10)
+        self._screen.blit(fps_text, fps_rect)
+
         self._manager.draw_ui(self._screen)
 
         pygame.display.flip()
