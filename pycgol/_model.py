@@ -1,3 +1,5 @@
+import numpy as np
+from scipy import signal
 from ._state import State
 
 """
@@ -8,49 +10,31 @@ Any dead cell with exactly three live neighbours becomes a live cell, as if by r
 """
 
 class Model:
-    
-    @classmethod
-    def _neighbours(cls, cell: tuple[int, int], width: int, height: int) -> list[tuple[int, int]]:
-        x, y = cell
 
-        if x < 0 or x >= width or y < 0 or y >= height:
-            raise ValueError(f"({x}, {y}) is outside of the bounds ({width}, {height})")
+    # Convolution kernel to count neighbors
+    _KERNEL = np.array([[1, 1, 1],
+                        [1, 0, 1],
+                        [1, 1, 1]], dtype=np.int8)
 
-        retval = [
-            (x-1, y-1),
-            (x,   y-1),
-            (x+1, y-1),
-            (x-1, y),
-            (x+1, y),
-            (x-1, y+1),
-            (x,   y+1),
-            (x+1, y+1),
-        ]
-        return [(x,y) for (x,y) in retval if 0 <= x < width and 0 <= y < height]
-        
-    @classmethod
-    def _alive_neighbours(cls, cell: tuple[int, int], state: State) -> int:
-        neighbours = cls._neighbours(cell, state.width, state.height)
-        alive_neighbours = [state[x, y] for x, y in neighbours]
-        return sum(alive_neighbours)
-
-    @classmethod
-    def _next_cell_state(cls, cell: tuple[int, int], state: State) -> bool:
-        x, y = cell
-        alive_neighbours = cls._alive_neighbours(cell, state)
-        if(state[x, y]): # cell is alive
-            if alive_neighbours < 2 or alive_neighbours > 3:
-                return False;
-            return True
-        else:
-            if alive_neighbours == 3:
-                return True
-            return False
-        
     @classmethod
     def next_state(cls, state: State) -> State:
+        # Convert state to numpy array for fast computation
+        grid = np.array([[state[x, y] for x in range(state.width)]
+                         for y in range(state.height)], dtype=np.int8)
+
+        # Count neighbors using convolution (much faster than loops)
+        neighbor_count = signal.convolve2d(grid, cls._KERNEL, mode='same', boundary='fill')
+
+        # Apply Game of Life rules vectorized
+        # Live cells with 2 or 3 neighbors survive
+        # Dead cells with exactly 3 neighbors become alive
+        next_grid = ((grid == 1) & ((neighbor_count == 2) | (neighbor_count == 3))) | \
+                    ((grid == 0) & (neighbor_count == 3))
+
+        # Create new state and copy results
         next_state = State(state.width, state.height)
         for y in range(state.height):
             for x in range(state.width):
-                next_state[x,y] = cls._next_cell_state((x,y), state)
+                next_state[x, y] = bool(next_grid[y, x])
+
         return next_state
