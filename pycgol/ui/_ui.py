@@ -3,7 +3,7 @@
 import pygame
 import pygame_gui
 
-from .._state import State
+from ..state import StateInterface
 from ._viewport_manager import ViewportManager
 from ._ui_components import UIComponents
 from ._renderer import Renderer
@@ -93,10 +93,10 @@ class UI:
 
     # UI Components delegation methods
     def show_context_menu(
-        self, position: tuple[int, int], is_paused: bool, available_engines: list[str], current_engine: str
+        self, position: tuple[int, int], is_paused: bool, available_engines: list[str], current_engine: str, fps_limit: int = 60
     ) -> None:
-        """Show context menu at the given position with engine selection."""
-        self._components.show_context_menu(position, is_paused, available_engines, current_engine)
+        """Show context menu at the given position with engine selection and FPS limit toggle."""
+        self._components.show_context_menu(position, is_paused, available_engines, current_engine, fps_limit)
 
     def hide_context_menu(self) -> None:
         """Hide the context menu."""
@@ -113,6 +113,10 @@ class UI:
     def is_pause_button(self, ui_element: pygame_gui.core.UIElement) -> bool:
         """Check if UI element is the pause button."""
         return self._components.is_pause_button(ui_element)
+
+    def is_fps_limit_button(self, ui_element: pygame_gui.core.UIElement) -> bool:
+        """Check if UI element is the FPS limit button."""
+        return self._components.is_fps_limit_button(ui_element)
 
     def get_engine_from_button(self, ui_element: pygame_gui.core.UIElement) -> str | None:
         """Get engine name if UI element is an engine selection button."""
@@ -135,6 +139,6 @@ class UI:
         return self._components.has_help_popup()
 
     # Rendering delegation method
-    def render(self, state: State, fps: float = 0.0) -> None:
+    def render(self, state: StateInterface, fps: float = 0.0) -> None:
         """Render the game state and UI."""
         self._renderer.render(state, self._viewport, fps)

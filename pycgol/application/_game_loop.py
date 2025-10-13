@@ -1,6 +1,6 @@
 """Game loop and timing management for Conway's Game of Life."""
 
-from .._state import State
+from ..state import StateInterface
 from ..engines import Engine
 
 
@@ -35,7 +35,7 @@ class GameLoop:
         """Toggle pause state."""
         self._paused = not self._paused
 
-    def update(self, delta_t: float, state: State, engine: type[Engine]) -> State:
+    def update(self, delta_t: float, state: StateInterface, engine: type[Engine]) -> StateInterface:
         """
         Update the game state based on elapsed time.
 

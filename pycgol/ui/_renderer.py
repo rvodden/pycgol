@@ -3,7 +3,7 @@
 import pygame
 import pygame_gui
 
-from .._state import State
+from ..state import StateInterface
 from ._viewport_manager import ViewportManager
 
 
@@ -21,7 +21,7 @@ class Renderer:
         self._screen = screen
         self._manager = manager
 
-    def render(self, state: State, viewport: ViewportManager, fps: float = 0.0) -> None:
+    def render(self, state: StateInterface, viewport: ViewportManager, fps: float = 0.0) -> None:
         """
         Render the game state and UI.
 

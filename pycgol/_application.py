@@ -2,7 +2,7 @@ import pygame
 import pygame_gui
 
 from .ui._ui import UI
-from .engines import Engine, EngineRegistry, LoopEngine, NumpyEngine
+from .engines import Engine, EngineRegistry, LoopEngine, NumpyEngine, SparseEngine
 from .application import EventHandler, GameLoop, WorldInitializer
 
 _SCREEN_WIDTH: int = 1280
@@ -78,6 +78,7 @@ class Application:
             self._engine_registry = EngineRegistry()
             self._engine_registry.register("numpy", NumpyEngine, is_default=True)
             self._engine_registry.register("loop", LoopEngine)
+            self._engine_registry.register("sparse", SparseEngine)
         else:
             self._engine_registry = engine_registry
 
@@ -91,12 +92,17 @@ class Application:
                 current_engine_name = name
                 break
 
+        # Frame rate limit (60 FPS by default, 0 for unlimited)
+        self._fps_limit: int = 60
+
         # Configure event handler with engine information
         self._event_handler.set_engine_info(
             self._engine_registry.list_engines(),
             current_engine_name
         )
         self._event_handler.set_engine_change_callback(self.set_engine_by_name)
+        self._event_handler.set_fps_limit_info(self._fps_limit)
+        self._event_handler.set_fps_limit_toggle_callback(self.toggle_fps_limit)
 
     def get_engine_registry(self) -> EngineRegistry:
         """Get the engine registry."""
@@ -127,12 +133,26 @@ class Application:
         """
         self._engine = self._engine_registry.get(name)
 
+    def get_fps_limit(self) -> int:
+        """
+        Get the current FPS limit.
+
+        Returns:
+            FPS limit (60 for limited, 0 for unlimited)
+        """
+        return self._fps_limit
+
+    def toggle_fps_limit(self) -> None:
+        """Toggle between limited (60 FPS) and unlimited frame rate."""
+        self._fps_limit = 0 if self._fps_limit == 60 else 60
+        self._event_handler.set_fps_limit_info(self._fps_limit)
+
     def run(self) -> None:
         """Run the main game loop."""
         running = True
 
         while running:
-            delta_t = self._clock.tick(60) / 1000.0
+            delta_t = self._clock.tick(self._fps_limit) / 1000.0
 
             # Process events
             for event in pygame.event.get():

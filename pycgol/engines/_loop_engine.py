@@ -1,9 +1,16 @@
 from ._engine import Engine
-from .._state import State
+from ..state import StateInterface
 
 
 class LoopEngine(Engine):
-    """Original nested loop implementation."""
+    """Original nested loop implementation.
+
+    This engine works with any StateInterface implementation and preserves
+    the input state type. It has no preferred state type.
+    """
+
+    # No preference - works equally well with any state type
+    preferred_state_type = None
 
     @classmethod
     def _neighbours(
@@ -27,13 +34,13 @@ class LoopEngine(Engine):
         return [(x, y) for (x, y) in retval if 0 <= x < width and 0 <= y < height]
 
     @classmethod
-    def _alive_neighbours(cls, cell: tuple[int, int], state: State) -> int:
+    def _alive_neighbours(cls, cell: tuple[int, int], state: StateInterface) -> int:
         neighbours = cls._neighbours(cell, state.width, state.height)
         alive_neighbours = [state[x, y] for x, y in neighbours]
         return sum(alive_neighbours)
 
     @classmethod
-    def _next_cell_state(cls, cell: tuple[int, int], state: State) -> bool:
+    def _next_cell_state(cls, cell: tuple[int, int], state: StateInterface) -> bool:
         x, y = cell
         alive_neighbours = cls._alive_neighbours(cell, state)
         if state[x, y]:  # cell is alive
@@ -46,9 +53,13 @@ class LoopEngine(Engine):
             return False
 
     @classmethod
-    def next_state(cls, state: State) -> State:
-        next_state = State(state.width, state.height)
+    def next_state(cls, state: StateInterface) -> StateInterface:
+        # Preserve input state type - create new state of same type
+        next_state_type = type(state)
+        next_state = next_state_type(state.width, state.height)
+
         for y in range(state.height):
             for x in range(state.width):
                 next_state[x, y] = cls._next_cell_state((x, y), state)
+
         return next_state

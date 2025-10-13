@@ -2,17 +2,28 @@ import numpy as np
 from scipy import signal
 
 from ._engine import Engine
-from .._state import State
+from ..state import StateInterface, DenseState
 
 
 class NumpyEngine(Engine):
-    """Numpy-optimized implementation."""
+    """Numpy-optimized implementation.
+
+    This engine requires dense state for efficient numpy array operations.
+    It will convert sparse states to dense on first use.
+    """
+
+    # Prefer dense state for numpy array operations
+    preferred_state_type = DenseState
 
     # Convolution kernel to count neighbors
     _KERNEL = np.array([[1, 1, 1], [1, 0, 1], [1, 1, 1]], dtype=np.int8)
 
     @classmethod
-    def next_state(cls, state: State) -> State:
+    def next_state(cls, state: StateInterface) -> StateInterface:
+        # Optimize to dense state if needed
+        state = cls.optimize_state(state)
+
+        # Now we can safely assume it's a DenseState with _cells attribute
         # Convert state to numpy array for fast computation
         grid = np.array(
             [[state[x, y] for x in range(state.width)] for y in range(state.height)],
@@ -31,8 +42,8 @@ class NumpyEngine(Engine):
             (grid == 0) & (neighbor_count == 3)
         )
 
-        # Create new state and copy results
-        next_state = State(state.width, state.height)
+        # Create new dense state and copy results
+        next_state = DenseState(state.width, state.height)
         for y in range(state.height):
             for x in range(state.width):
                 next_state[x, y] = bool(next_grid[y, x])

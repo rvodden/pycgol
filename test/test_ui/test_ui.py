@@ -1,7 +1,7 @@
 from unittest.mock import Mock, patch
 
 from pycgol.ui._ui import UI
-from pycgol._state import State
+from pycgol.state import DenseState
 
 
 class TestUI:
@@ -132,9 +132,9 @@ class TestUI:
         mock_components = Mock()
 
         ui = UI(800, 600, Mock(), cell_size=10, components=mock_components)
-        ui.show_context_menu((100, 200), is_paused=False, available_engines=["numpy", "loop"], current_engine="numpy")
+        ui.show_context_menu((100, 200), is_paused=False, available_engines=["numpy", "loop"], current_engine="numpy", fps_limit=60)
 
-        mock_components.show_context_menu.assert_called_once_with((100, 200), False, ["numpy", "loop"], "numpy")
+        mock_components.show_context_menu.assert_called_once_with((100, 200), False, ["numpy", "loop"], "numpy", 60)
 
     @patch("pycgol.ui._ui.pygame")
     def test_hide_context_menu_delegates(self, mock_pygame):
@@ -200,7 +200,7 @@ class TestUI:
             renderer=mock_renderer,
             components=Mock(),
         )
-        state = State(10, 10)
+        state = DenseState(10, 10)
         ui.render(state, fps=60.0)
 
         mock_renderer.render.assert_called_once_with(state, mock_viewport, 60.0)

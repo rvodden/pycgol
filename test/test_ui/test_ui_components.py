@@ -198,6 +198,83 @@ class TestUIComponents:
 
     @patch("pycgol.ui._ui_components.pygame_gui.elements.UIPanel")
     @patch("pycgol.ui._ui_components.pygame_gui.elements.UIButton")
+    def test_is_fps_limit_button_returns_true_for_fps_limit_button(
+        self, mock_button_class, mock_panel_class
+    ):
+        """Test is_fps_limit_button correctly identifies FPS limit button."""
+        mock_manager = Mock()
+        components = UIComponents(mock_manager, 800, 600)
+
+        components.show_context_menu((100, 100), is_paused=False, available_engines=["numpy"], current_engine="numpy")
+        fps_limit_button = components._context_menu_buttons["fps_limit"]
+
+        assert components.is_fps_limit_button(fps_limit_button) is True
+
+    @patch("pycgol.ui._ui_components.pygame_gui.elements.UIPanel")
+    @patch("pycgol.ui._ui_components.pygame_gui.elements.UIButton")
+    def test_is_fps_limit_button_returns_false_for_other_element(
+        self, mock_button_class, mock_panel_class
+    ):
+        """Test is_fps_limit_button returns False for other elements."""
+        mock_manager = Mock()
+        components = UIComponents(mock_manager, 800, 600)
+
+        components.show_context_menu((100, 100), is_paused=False, available_engines=["numpy"], current_engine="numpy")
+        other_element = Mock()
+
+        assert components.is_fps_limit_button(other_element) is False
+
+    @patch("pycgol.ui._ui_components.pygame_gui.elements.UIButton")
+    def test_is_fps_limit_button_returns_false_when_no_menu(self, mock_button_class):
+        """Test is_fps_limit_button returns False when no menu exists."""
+        mock_manager = Mock()
+        components = UIComponents(mock_manager, 800, 600)
+
+        some_element = Mock()
+
+        assert components.is_fps_limit_button(some_element) is False
+
+    @patch("pycgol.ui._ui_components.pygame_gui.elements.UIPanel")
+    @patch("pycgol.ui._ui_components.pygame_gui.elements.UIButton")
+    def test_show_context_menu_fps_limit_enabled(
+        self, mock_button_class, mock_panel_class
+    ):
+        """Test context menu shows FPS limit as enabled when fps_limit=60."""
+        mock_manager = Mock()
+        components = UIComponents(mock_manager, 800, 600)
+
+        # Reset mock to ignore help button created during init
+        mock_button_class.reset_mock()
+
+        components.show_context_menu((100, 100), is_paused=False, available_engines=["numpy"], current_engine="numpy", fps_limit=60)
+
+        # Check FPS limit button text (second button: pause, fps_limit, engine)
+        calls = mock_button_class.call_args_list
+        fps_button_call = calls[1]  # Second button is FPS limit
+        assert "[*] Limit 60 FPS" in fps_button_call.kwargs["text"]
+
+    @patch("pycgol.ui._ui_components.pygame_gui.elements.UIPanel")
+    @patch("pycgol.ui._ui_components.pygame_gui.elements.UIButton")
+    def test_show_context_menu_fps_limit_disabled(
+        self, mock_button_class, mock_panel_class
+    ):
+        """Test context menu shows FPS limit as disabled when fps_limit=0."""
+        mock_manager = Mock()
+        components = UIComponents(mock_manager, 800, 600)
+
+        # Reset mock to ignore help button created during init
+        mock_button_class.reset_mock()
+
+        components.show_context_menu((100, 100), is_paused=False, available_engines=["numpy"], current_engine="numpy", fps_limit=0)
+
+        # Check FPS limit button text (second button: pause, fps_limit, engine)
+        calls = mock_button_class.call_args_list
+        fps_button_call = calls[1]  # Second button is FPS limit
+        assert "    Limit 60 FPS" in fps_button_call.kwargs["text"]
+        assert "[*]" not in fps_button_call.kwargs["text"]
+
+    @patch("pycgol.ui._ui_components.pygame_gui.elements.UIPanel")
+    @patch("pycgol.ui._ui_components.pygame_gui.elements.UIButton")
     def test_get_engine_from_button_returns_engine_name(
         self, mock_button_class, mock_panel_class
     ):
@@ -220,7 +297,7 @@ class TestUIComponents:
         components = UIComponents(mock_manager, 800, 600)
 
         # Need to ensure each button is a unique mock object
-        button_instances = [Mock(), Mock()]
+        button_instances = [Mock(), Mock(), Mock()]  # pause, fps_limit, engine
         mock_button_class.side_effect = button_instances
 
         components.show_context_menu((100, 100), is_paused=False, available_engines=["numpy"], current_engine="numpy")
@@ -261,12 +338,12 @@ class TestUIComponents:
             current_engine="loop"
         )
 
-        # Should create 1 pause button + 3 engine buttons = 4 total
-        assert mock_button_class.call_count == 4
+        # Should create 1 pause button + 1 fps limit button + 3 engine buttons = 5 total
+        assert mock_button_class.call_count == 5
 
         # Check that engine buttons were created with correct text
         calls = mock_button_class.call_args_list
-        engine_calls = calls[1:]  # Skip first call (pause button)
+        engine_calls = calls[2:]  # Skip first two calls (pause button and fps_limit button)
 
         # numpy should not have indicator
         assert "numpy" in engine_calls[0].kwargs["text"]

@@ -1,6 +1,6 @@
 """World initialization for Conway's Game of Life."""
 
-from .._state import State
+from ..state import StateInterface
 from ..objects import GliderGun
 
 
@@ -28,7 +28,7 @@ class WorldInitializer:
         self._cell_size = cell_size
         self._border_cells = border_cells
 
-    def create_initial_state(self) -> State:
+    def create_initial_state(self) -> StateInterface:
         """
         Create the initial game state with patterns.
 

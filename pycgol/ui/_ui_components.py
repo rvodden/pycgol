@@ -34,23 +34,24 @@ class UIComponents:
         )
 
     def show_context_menu(
-        self, position: tuple[int, int], is_paused: bool, available_engines: list[str], current_engine: str
+        self, position: tuple[int, int], is_paused: bool, available_engines: list[str], current_engine: str, fps_limit: int = 60
     ) -> None:
         """
-        Show context menu at the given position with play/pause and engine selection.
+        Show context menu at the given position with play/pause, FPS limit toggle, and engine selection.
 
         Args:
             position: Screen position for the menu
             is_paused: Whether the game is currently paused
             available_engines: List of available engine names
             current_engine: Name of the currently active engine
+            fps_limit: Current FPS limit (60 for limited, 0 for unlimited)
         """
         self.hide_context_menu()
 
         # Calculate menu size based on number of items
         button_height = 35
         button_width = 150
-        menu_height = button_height * (2 + len(available_engines))  # Pause + separator + engines
+        menu_height = button_height * (3 + len(available_engines))  # Pause + FPS limit + separator + engines
         menu_width = button_width
 
         # Create panel for the menu
@@ -71,8 +72,20 @@ class UIComponents:
         )
         self._context_menu_buttons["pause"] = pause_button
 
-        # Add engine selection buttons
+        # Add FPS limit toggle button
         y_offset = button_height
+        fps_text = "[*] Limit 60 FPS" if fps_limit == 60 else "    Limit 60 FPS"
+        fps_button = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect((0, y_offset), (button_width, button_height)),
+            text=fps_text,
+            manager=self._manager,
+            container=self._context_menu_panel,
+            object_id="#fps_limit_button",
+        )
+        self._context_menu_buttons["fps_limit"] = fps_button
+
+        # Add engine selection buttons
+        y_offset += button_height
         for engine_name in available_engines:
             # Use [*] as indicator since ✓ may not render in default font
             button_text = f"[*] {engine_name}" if engine_name == current_engine else f"    {engine_name}"
@@ -118,6 +131,10 @@ class UIComponents:
         """Check if the given UI element is the pause button."""
         return "pause" in self._context_menu_buttons and ui_element == self._context_menu_buttons["pause"]
 
+    def is_fps_limit_button(self, ui_element: pygame_gui.core.UIElement) -> bool:
+        """Check if the given UI element is the FPS limit button."""
+        return "fps_limit" in self._context_menu_buttons and ui_element == self._context_menu_buttons["fps_limit"]
+
     def get_engine_from_button(self, ui_element: pygame_gui.core.UIElement) -> str | None:
         """
         Get the engine name if the UI element is an engine selection button.
@@ -148,7 +165,8 @@ class UIComponents:
 * Mouse Wheel: Zoom in/out<br>
 * Right Click: Open context menu<br>
   - Pause/Resume simulation<br>
-  - Switch between engines (numpy/loop)<br>
+  - Toggle FPS limit (60 FPS / unlimited)<br>
+  - Switch between engines (numpy/loop/sparse)<br>
 * Left Click outside menu: Close menu<br>
 * Click '?' button: Show this help<br>
 <br>

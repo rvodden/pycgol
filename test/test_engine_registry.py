@@ -3,7 +3,7 @@
 import pytest
 
 from pycgol.engines import Engine, LoopEngine, NumpyEngine, EngineRegistry
-from pycgol._state import State
+from pycgol.state import StateInterface as State, DenseState
 
 
 class DummyEngine(Engine):
@@ -246,7 +246,7 @@ class TestEngineRegistry:
         assert registry.get("numpy") == NumpyEngine
 
         # Both should work with State
-        state = State(10, 10)
+        state = DenseState(10, 10)
         state[5, 5] = True
 
         loop_next = registry.get("loop").next_state(state)

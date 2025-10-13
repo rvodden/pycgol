@@ -1,5 +1,5 @@
 import pytest
-from pycgol._state import State
+from pycgol.state import SparseState as State
 
 
 class TestState:

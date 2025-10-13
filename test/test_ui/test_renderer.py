@@ -3,7 +3,7 @@ from unittest.mock import Mock, patch
 
 from pycgol.ui._renderer import Renderer
 from pycgol.ui._viewport_manager import ViewportManager
-from pycgol._state import State
+from pycgol.state import DenseState as State
 
 
 class TestRenderer:

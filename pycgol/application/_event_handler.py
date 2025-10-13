@@ -6,7 +6,7 @@ import pygame
 import pygame_gui
 
 from ..ui._ui import UI
-from .._state import State
+from ..state import StateInterface
 from ._game_loop import GameLoop
 
 
@@ -24,8 +24,10 @@ class EventHandler:
         self._ui = ui
         self._game_loop = game_loop
         self._engine_change_callback: Callable[[str], None] | None = None
+        self._fps_limit_toggle_callback: Callable[[], None] | None = None
         self._available_engines: list[str] = []
         self._current_engine_name: str = ""
+        self._fps_limit: int = 60
 
     def set_engine_info(self, available_engines: list[str], current_engine_name: str) -> None:
         """
@@ -47,7 +49,25 @@ class EventHandler:
         """
         self._engine_change_callback = callback
 
-    def handle_event(self, event: pygame.event.Event, state: State) -> bool:
+    def set_fps_limit_info(self, fps_limit: int) -> None:
+        """
+        Set FPS limit information for context menu display.
+
+        Args:
+            fps_limit: Current FPS limit (60 for limited, 0 for unlimited)
+        """
+        self._fps_limit = fps_limit
+
+    def set_fps_limit_toggle_callback(self, callback: Callable[[], None]) -> None:
+        """
+        Set the callback function for FPS limit toggle.
+
+        Args:
+            callback: Function to call when user toggles FPS limit
+        """
+        self._fps_limit_toggle_callback = callback
+
+    def handle_event(self, event: pygame.event.Event, state: StateInterface) -> bool:
         """
         Handle a single pygame event.
 
@@ -96,7 +116,8 @@ class EventHandler:
                     event.pos,
                     self._game_loop.is_paused,
                     self._available_engines,
-                    self._current_engine_name
+                    self._current_engine_name,
+                    self._fps_limit
                 )
 
     def _handle_mouse_button_up(self, event: pygame.event.Event) -> None:
@@ -108,7 +129,7 @@ class EventHandler:
         """Handle mouse motion events."""
         self._ui.update_drag(event.pos)
 
-    def _handle_mouse_wheel(self, event: pygame.event.Event, state: State) -> None:
+    def _handle_mouse_wheel(self, event: pygame.event.Event, state: StateInterface) -> None:
         """Handle mouse wheel events."""
         if not self._ui.has_help_popup():
             mouse_pos = pygame.mouse.get_pos()
@@ -119,6 +140,11 @@ class EventHandler:
         # Check if it's the pause button
         if self._ui.is_pause_button(event.ui_element):
             self._game_loop.toggle_pause()
+            self._ui.hide_context_menu()
+        # Check if it's the FPS limit button
+        elif self._ui.is_fps_limit_button(event.ui_element):
+            if self._fps_limit_toggle_callback is not None:
+                self._fps_limit_toggle_callback()
             self._ui.hide_context_menu()
         # Check if it's an engine selection button
         elif (engine_name := self._ui.get_engine_from_button(event.ui_element)) is not None:

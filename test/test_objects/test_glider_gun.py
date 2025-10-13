@@ -1,4 +1,4 @@
-from pycgol._state import State
+from pycgol.state import DenseState as State
 from pycgol.objects._glide_gun import GliderGun
 
 
