@@ -1,19 +1,11 @@
-from .._state import State
+from ._object import Object
 
-class Glider:
 
-    _CELLS = [
-        (0,0),
-        (1,0),
-        (2,0),
-        (2,1),
-        (1,2)
-    ]
+class Glider(Object):
+    """A glider pattern that moves diagonally across the grid."""
 
-    @classmethod
-    def place(cls, position: tuple[int, int], state: State) -> State:
-        x, y = position
-        for u, v in cls._CELLS:
-            if 0 <= x+u < state.width and 0 <= y+v < state.height:
-                state[x+u, y+v] = True
-        return state
+    _CELLS = [(0, 0), (1, 0), (2, 0), (2, 1), (1, 2)]
+
+    def __init__(self) -> None:
+        """Initialize a Glider object."""
+        super().__init__(self._CELLS)

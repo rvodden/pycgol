@@ -1,170 +1,327 @@
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 
 from pycgol._application import Application
+from pycgol.engines import EngineRegistry, LoopEngine, NumpyEngine
+
+
+def create_mock_world_initializer():
+    """Helper to create a mock WorldInitializer."""
+    mock_state = Mock()
+    mock_state.width = 328
+    mock_state.height = 272
+
+    mock_initializer = Mock()
+    mock_initializer.create_initial_state.return_value = mock_state
+    mock_initializer.get_initial_viewport_position.return_value = (100, 100)
+
+    return mock_initializer, mock_state
 
 
 class TestApplication:
+    @patch("pycgol._application.pygame")
+    @patch("pycgol._application.pygame_gui")
+    @patch("pycgol._application.UI")
+    @patch("pycgol._application.WorldInitializer")
+    def test_application_initialization(
+        self,
+        mock_world_initializer_class,
+        mock_ui_class,
+        mock_pygame_gui,
+        mock_pygame,
+    ):
+        mock_initializer, mock_state = create_mock_world_initializer()
+        mock_world_initializer_class.return_value = mock_initializer
 
-    @patch('pycgol._application.pygame')
-    @patch('pycgol._application.UI')
-    @patch('pycgol._application.State')
-    @patch('pycgol._application.Glider')
-    def test_application_initialization(self, mock_glider, mock_state_class, mock_ui_class, mock_pygame):
-        mock_state_instance = Mock()
-        mock_state_class.return_value = mock_state_instance
-        mock_glider.place.return_value = mock_state_instance
         mock_clock = Mock()
         mock_pygame.time.Clock.return_value = mock_clock
+        mock_ui_instance = Mock()
+        mock_ui_class.return_value = mock_ui_instance
 
-        app = Application()
+        _ = Application()
 
         # Verify pygame.init was called
         mock_pygame.init.assert_called_once()
 
-        # Verify UI was created with correct dimensions
-        mock_ui_class.assert_called_once_with(1280, 720)
+        # Verify UI was created with correct dimensions and cell size
+        mock_ui_class.assert_called_once_with(
+            1280, 720, mock_pygame_gui.UIManager.return_value, 10
+        )
 
-        # Verify State was created with correct dimensions (screen size / 10)
-        mock_state_class.assert_called_once_with(128, 72)
-
-        # Verify Glider was placed at the correct position
-        mock_glider.place.assert_called_once_with((5, 67), mock_state_instance)
+        # Verify WorldInitializer was created with correct parameters
+        mock_world_initializer_class.assert_called_once_with(1280, 720, 10, 100)
 
         # Verify clock was created
         mock_pygame.time.Clock.assert_called_once()
 
-    @patch('pycgol._application.pygame')
-    @patch('pycgol._application.UI')
-    @patch('pycgol._application.State')
-    @patch('pycgol._application.Glider')
-    @patch('pycgol._application.Model')
-    def test_run_game_loop_quit_event(self, mock_model, mock_glider, mock_state_class, mock_ui_class, mock_pygame):
+    @patch("pycgol._application.pygame")
+    @patch("pycgol._application.pygame_gui")
+    @patch("pycgol._application.UI")
+    @patch("pycgol._application.EventHandler")
+    @patch("pycgol._application.GameLoop")
+    def test_run_game_loop_quit_event(
+        self,
+        mock_game_loop_class,
+        mock_event_handler_class,
+        mock_ui_class,
+        mock_pygame_gui,
+        mock_pygame,
+    ):
         # Setup mocks
-        mock_state_instance = Mock()
-        mock_state_class.return_value = mock_state_instance
-        mock_glider.place.return_value = mock_state_instance
+        mock_initializer, mock_state = create_mock_world_initializer()
 
         mock_ui_instance = Mock()
         mock_ui_class.return_value = mock_ui_instance
 
+        mock_game_loop_instance = Mock()
+        mock_game_loop_instance.update.return_value = mock_state
+        mock_game_loop_class.return_value = mock_game_loop_instance
+
+        mock_event_handler_instance = Mock()
+        mock_event_handler_instance.handle_event.return_value = True  # Signal quit
+        mock_event_handler_class.return_value = mock_event_handler_instance
+
         mock_clock = Mock()
+        mock_clock.tick.return_value = 16  # ~60 FPS
+        mock_clock.get_fps.return_value = 60.0
         mock_pygame.time.Clock.return_value = mock_clock
+
+        mock_manager = Mock()
+        mock_pygame_gui.UIManager.return_value = mock_manager
 
         # Create quit event
         quit_event = Mock()
         quit_event.type = mock_pygame.QUIT
         mock_pygame.event.get.return_value = [quit_event]
 
-        mock_model.next_state.return_value = mock_state_instance
+        # Mock engine
+        mock_engine = Mock()
+        mock_engine.next_state.return_value = mock_state
 
-        app = Application()
+        # Inject the world initializer
+        app = Application(engine=mock_engine, world_initializer=mock_initializer)
         app.run()
 
         # Verify pygame.quit was called when exiting
         mock_pygame.quit.assert_called_once()
 
-        # Verify UI render was called
-        mock_ui_instance.render.assert_called_with(mock_state_instance)
+        # Verify UI render was called with fps
+        assert mock_ui_instance.render.called
+        render_call_args = mock_ui_instance.render.call_args
+        assert render_call_args[0][0] == mock_state  # state argument
+        assert render_call_args[0][1] == 60.0  # fps argument
 
         # Verify clock tick was called
         mock_clock.tick.assert_called_with(60)
 
-        # Verify Model.next_state was called
-        mock_model.next_state.assert_called_with(mock_state_instance)
-
-    @patch('pycgol._application.pygame')
-    @patch('pycgol._application.UI')
-    @patch('pycgol._application.State')
-    @patch('pycgol._application.Glider')
-    @patch('pycgol._application.Model')
-    def test_run_game_loop_no_events(self, mock_model, mock_glider, mock_state_class, mock_ui_class, mock_pygame):
+    @patch("pycgol._application.pygame")
+    @patch("pycgol._application.pygame_gui")
+    @patch("pycgol._application.UI")
+    @patch("pycgol._application.EventHandler")
+    @patch("pycgol._application.GameLoop")
+    def test_pause_functionality(
+        self,
+        mock_game_loop_class,
+        mock_event_handler_class,
+        mock_ui_class,
+        mock_pygame_gui,
+        mock_pygame,
+    ):
         # Setup mocks
-        mock_state_instance = Mock()
-        mock_state_class.return_value = mock_state_instance
-        mock_glider.place.return_value = mock_state_instance
+        mock_initializer, mock_state = create_mock_world_initializer()
 
         mock_ui_instance = Mock()
         mock_ui_class.return_value = mock_ui_instance
 
-        mock_clock = Mock()
-        mock_pygame.time.Clock.return_value = mock_clock
+        mock_game_loop_instance = Mock()
+        mock_game_loop_instance.update.return_value = mock_state
+        mock_game_loop_class.return_value = mock_game_loop_instance
 
-        mock_model.next_state.return_value = mock_state_instance
-
-        # Simulate empty events for a few iterations, then quit
-        call_count = 0
-        def mock_event_get():
-            nonlocal call_count
-            call_count += 1
-            if call_count >= 3:  # After 3 iterations, send quit event
-                quit_event = Mock()
-                quit_event.type = mock_pygame.QUIT
-                return [quit_event]
-            return []  # No events
-
-        mock_pygame.event.get.side_effect = mock_event_get
-
-        app = Application()
-        app.run()
-
-        # Verify Model.next_state was called multiple times
-        assert mock_model.next_state.call_count >= 3
-
-        # Verify UI render was called multiple times
-        assert mock_ui_instance.render.call_count >= 3
-
-        # Verify clock tick was called multiple times
-        assert mock_clock.tick.call_count >= 3
-
-    @patch('pycgol._application.pygame')
-    @patch('pycgol._application.UI')
-    @patch('pycgol._application.State')
-    @patch('pycgol._application.Glider')
-    @patch('pycgol._application.Model')
-    def test_run_game_loop_multiple_events(self, mock_model, mock_glider, mock_state_class, mock_ui_class, mock_pygame):
-        # Setup mocks
-        mock_state_instance = Mock()
-        mock_state_class.return_value = mock_state_instance
-        mock_glider.place.return_value = mock_state_instance
-
-        mock_ui_instance = Mock()
-        mock_ui_class.return_value = mock_ui_instance
+        mock_event_handler_instance = Mock()
+        # First call doesn't quit, second call quits
+        mock_event_handler_instance.handle_event.side_effect = [False, True]
+        mock_event_handler_class.return_value = mock_event_handler_instance
 
         mock_clock = Mock()
+        mock_clock.tick.return_value = 1000  # 1 second to trigger state update
+        mock_clock.get_fps.return_value = 60.0
         mock_pygame.time.Clock.return_value = mock_clock
 
-        mock_model.next_state.return_value = mock_state_instance
+        mock_manager = Mock()
+        mock_pygame_gui.UIManager.return_value = mock_manager
 
-        # Create various events, including quit
-        other_event = Mock()
-        other_event.type = "SOME_OTHER_EVENT"
+        # Mock engine
+        mock_engine = Mock()
+        mock_engine.next_state.return_value = mock_state
+
+        button_event = Mock()
         quit_event = Mock()
-        quit_event.type = mock_pygame.QUIT
+        mock_pygame.event.get.side_effect = [[button_event], [quit_event]]
 
-        mock_pygame.event.get.return_value = [other_event, quit_event]
-
-        app = Application()
+        app = Application(engine=mock_engine, world_initializer=mock_initializer)
         app.run()
 
-        # Should still quit properly even with other events
-        mock_pygame.quit.assert_called_once()
+        # Verify game loop update was called
+        assert mock_game_loop_instance.update.called
 
-    @patch('pycgol._application.pygame')
-    @patch('pycgol._application.UI')
-    @patch('pycgol._application.State')
-    @patch('pycgol._application.Glider')
-    def test_constants_used_correctly(self, mock_glider, mock_state_class, mock_ui_class, mock_pygame):
-        mock_state_instance = Mock()
-        mock_state_class.return_value = mock_state_instance
-        mock_glider.place.return_value = mock_state_instance
+    @patch("pycgol._application.pygame")
+    @patch("pycgol._application.pygame_gui")
+    @patch("pycgol._application.UI")
+    @patch("pycgol._application.EventHandler")
+    @patch("pycgol._application.GameLoop")
+    def test_different_update_rate(
+        self,
+        mock_game_loop_class,
+        mock_event_handler_class,
+        mock_ui_class,
+        mock_pygame_gui,
+        mock_pygame,
+    ):
+        """Test that the update rate parameter works correctly."""
+        mock_initializer, mock_state = create_mock_world_initializer()
 
-        Application()
+        mock_ui_instance = Mock()
+        mock_ui_class.return_value = mock_ui_instance
 
-        # Verify the constants are used correctly
-        # Screen dimensions: 1280x720
-        # State dimensions: 128x72 (screen/10)
-        # Glider position: (5, 67) where 67 = 72 - 5
-        mock_ui_class.assert_called_once_with(1280, 720)
-        mock_state_class.assert_called_once_with(128, 72)
-        mock_glider.place.assert_called_once_with((5, 67), mock_state_instance)
+        mock_game_loop_instance = Mock()
+        mock_game_loop_instance.update.return_value = mock_state
+        mock_game_loop_class.return_value = mock_game_loop_instance
+
+        mock_event_handler_instance = Mock()
+        # Return True on 5th call to quit
+        mock_event_handler_instance.handle_event.side_effect = [False, False, False, False, True]
+        mock_event_handler_class.return_value = mock_event_handler_instance
+
+        mock_clock = Mock()
+        mock_clock.tick.return_value = 50  # 0.05 seconds per frame
+        mock_clock.get_fps.return_value = 60.0
+        mock_pygame.time.Clock.return_value = mock_clock
+
+        mock_manager = Mock()
+        mock_pygame_gui.UIManager.return_value = mock_manager
+
+        mock_pygame.event.get.return_value = [Mock()]
+
+        mock_engine = Mock()
+        mock_engine.next_state.return_value = mock_state
+
+        # Set update rate to 20 updates per second
+        app = Application(
+            gol_updates_per_second=20,
+            engine=mock_engine,
+            world_initializer=mock_initializer
+        )
+        app.run()
+
+        # Verify GameLoop was created with correct rate
+        mock_game_loop_class.assert_called_once_with(20)
+
+    @patch("pycgol._application.pygame")
+    @patch("pycgol._application.pygame_gui")
+    @patch("pycgol._application.UI")
+    def test_engine_registry_is_created_by_default(
+        self,
+        mock_ui_class,
+        mock_pygame_gui,
+        mock_pygame,
+    ):
+        """Test that Application creates a default EngineRegistry."""
+        mock_initializer, _ = create_mock_world_initializer()
+
+        app = Application(world_initializer=mock_initializer)
+
+        registry = app.get_engine_registry()
+        assert isinstance(registry, EngineRegistry)
+        assert registry.is_registered("numpy")
+        assert registry.is_registered("loop")
+        assert registry.get_default_name() == "numpy"
+
+    @patch("pycgol._application.pygame")
+    @patch("pycgol._application.pygame_gui")
+    @patch("pycgol._application.UI")
+    def test_can_provide_custom_engine_registry(
+        self,
+        mock_ui_class,
+        mock_pygame_gui,
+        mock_pygame,
+    ):
+        """Test that a custom EngineRegistry can be provided."""
+        mock_initializer, _ = create_mock_world_initializer()
+
+        custom_registry = EngineRegistry()
+        custom_registry.register("loop", LoopEngine, is_default=True)
+
+        app = Application(engine_registry=custom_registry, world_initializer=mock_initializer)
+
+        registry = app.get_engine_registry()
+        assert registry is custom_registry
+        assert registry.get_default_name() == "loop"
+
+    @patch("pycgol._application.pygame")
+    @patch("pycgol._application.pygame_gui")
+    @patch("pycgol._application.UI")
+    def test_get_current_engine(
+        self,
+        mock_ui_class,
+        mock_pygame_gui,
+        mock_pygame,
+    ):
+        """Test that get_current_engine returns the active engine."""
+        mock_initializer, _ = create_mock_world_initializer()
+
+        app = Application(engine=LoopEngine, world_initializer=mock_initializer)
+
+        assert app.get_current_engine() == LoopEngine
+
+    @patch("pycgol._application.pygame")
+    @patch("pycgol._application.pygame_gui")
+    @patch("pycgol._application.UI")
+    def test_set_engine(
+        self,
+        mock_ui_class,
+        mock_pygame_gui,
+        mock_pygame,
+    ):
+        """Test that set_engine changes the active engine."""
+        mock_initializer, _ = create_mock_world_initializer()
+
+        app = Application(engine=NumpyEngine, world_initializer=mock_initializer)
+        assert app.get_current_engine() == NumpyEngine
+
+        app.set_engine(LoopEngine)
+        assert app.get_current_engine() == LoopEngine
+
+    @patch("pycgol._application.pygame")
+    @patch("pycgol._application.pygame_gui")
+    @patch("pycgol._application.UI")
+    def test_set_engine_by_name(
+        self,
+        mock_ui_class,
+        mock_pygame_gui,
+        mock_pygame,
+    ):
+        """Test that set_engine_by_name changes the active engine using registry."""
+        mock_initializer, _ = create_mock_world_initializer()
+
+        app = Application(engine=NumpyEngine, world_initializer=mock_initializer)
+        assert app.get_current_engine() == NumpyEngine
+
+        app.set_engine_by_name("loop")
+        assert app.get_current_engine() == LoopEngine
+
+    @patch("pycgol._application.pygame")
+    @patch("pycgol._application.pygame_gui")
+    @patch("pycgol._application.UI")
+    def test_set_engine_by_name_raises_for_unknown_engine(
+        self,
+        mock_ui_class,
+        mock_pygame_gui,
+        mock_pygame,
+    ):
+        """Test that set_engine_by_name raises KeyError for unknown engine."""
+        mock_initializer, _ = create_mock_world_initializer()
+
+        app = Application(world_initializer=mock_initializer)
+
+        with pytest.raises(KeyError):
+            app.set_engine_by_name("nonexistent")

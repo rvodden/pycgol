@@ -1,1 +1,6 @@
 pytest
+coverage
+scipy-stubs
+ruff
+mypy
+

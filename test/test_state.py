@@ -3,7 +3,6 @@ from pycgol._state import State
 
 
 class TestState:
-
     def test_dimensions(self):
         undertest = State(10, 10)
 
@@ -47,27 +46,39 @@ class TestState:
         undertest = State(10, 10)
 
         # Test negative coordinates
-        with pytest.raises(ValueError, match=r"\(-1, 0\) is outside the bounds \(10, 10\)"):
+        with pytest.raises(
+            ValueError, match=r"\(-1, 0\) is outside the bounds \(10, 10\)"
+        ):
             undertest[-1, 0] = True
 
-        with pytest.raises(ValueError, match=r"\(0, -1\) is outside the bounds \(10, 10\)"):
+        with pytest.raises(
+            ValueError, match=r"\(0, -1\) is outside the bounds \(10, 10\)"
+        ):
             undertest[0, -1] = True
 
         # Test coordinates beyond bounds
-        with pytest.raises(ValueError, match=r"\(10, 5\) is outside the bounds \(10, 10\)"):
+        with pytest.raises(
+            ValueError, match=r"\(10, 5\) is outside the bounds \(10, 10\)"
+        ):
             undertest[10, 5] = True
 
-        with pytest.raises(ValueError, match=r"\(5, 10\) is outside the bounds \(10, 10\)"):
+        with pytest.raises(
+            ValueError, match=r"\(5, 10\) is outside the bounds \(10, 10\)"
+        ):
             undertest[5, 10] = True
 
     def test_bounds_validation_on_get(self):
         undertest = State(5, 5)
 
         # Test that getting invalid coordinates also raises ValueError
-        with pytest.raises(ValueError, match=r"\(5, 0\) is outside the bounds \(5, 5\)"):
+        with pytest.raises(
+            ValueError, match=r"\(5, 0\) is outside the bounds \(5, 5\)"
+        ):
             _ = undertest[5, 0]
 
-        with pytest.raises(ValueError, match=r"\(0, 5\) is outside the bounds \(5, 5\)"):
+        with pytest.raises(
+            ValueError, match=r"\(0, 5\) is outside the bounds \(5, 5\)"
+        ):
             _ = undertest[0, 5]
 
     def test_rectangular_grid(self):
@@ -101,7 +112,7 @@ class TestState:
         # Test edge case: what happens with 0 width?
         with pytest.raises(ValueError):
             _ = State(0, 5)
-    
+
     def test_height_property_empty_grid_edge_case(self):
         # Test edge case: what happens with 0 height?
         with pytest.raises(ValueError):
