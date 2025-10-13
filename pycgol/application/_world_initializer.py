@@ -1,6 +1,6 @@
 """World initialization for Conway's Game of Life."""
 
-from ..state import StateInterface
+from ..state import DenseState
 from ..objects import GliderGun
 
 
@@ -28,7 +28,7 @@ class WorldInitializer:
         self._cell_size = cell_size
         self._border_cells = border_cells
 
-    def create_initial_state(self) -> StateInterface:
+    def create_initial_state(self) -> DenseState:
         """
         Create the initial game state with patterns.
 
@@ -41,7 +41,7 @@ class WorldInitializer:
         grid_width = viewport_cells_width + (2 * self._border_cells)
         grid_height = viewport_cells_height + (2 * self._border_cells)
 
-        state = State(grid_width, grid_height)
+        state = DenseState(grid_width, grid_height)
 
         # Place first glider gun in top-left, shooting down-right
         gun1_x = self._border_cells + 10  # 10 cells from left edge
