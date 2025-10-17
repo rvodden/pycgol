@@ -33,42 +33,46 @@ class Renderer:
         # Fill with dark blue for out-of-bounds area
         self._screen.fill((20, 30, 60))
 
-        # Calculate how many cells fit in the viewport
+        # Fill the in-bounds area with black
+        # Calculate the screen-space rectangle that corresponds to the in-bounds grid area
+        viewport_start_x = max(0, -viewport.viewport_x)
+        viewport_start_y = max(0, -viewport.viewport_y)
         viewport_cells_width = self._screen.get_width() // viewport.cell_size
         viewport_cells_height = self._screen.get_height() // viewport.cell_size
+        viewport_end_x = min(viewport_cells_width, state.width - viewport.viewport_x)
+        viewport_end_y = min(viewport_cells_height, state.height - viewport.viewport_y)
 
-        # Draw background for in-bounds area and cells
-        for viewport_y in range(viewport_cells_height):
-            for viewport_x in range(viewport_cells_width):
-                # Calculate the corresponding position in the game grid
-                grid_x = viewport.viewport_x + viewport_x
-                grid_y = viewport.viewport_y + viewport_y
+        if viewport_end_x > viewport_start_x and viewport_end_y > viewport_start_y:
+            pygame.draw.rect(
+                self._screen,
+                "black",
+                pygame.Rect(
+                    viewport_start_x * viewport.cell_size,
+                    viewport_start_y * viewport.cell_size,
+                    (viewport_end_x - viewport_start_x) * viewport.cell_size,
+                    (viewport_end_y - viewport_start_y) * viewport.cell_size,
+                ),
+            )
 
-                # Check if this position is within the game grid bounds
-                if 0 <= grid_x < state.width and 0 <= grid_y < state.height:
-                    # Draw black background for in-bounds cells
-                    pygame.draw.rect(
-                        self._screen,
-                        "black",
-                        pygame.Rect(
-                            viewport_x * viewport.cell_size,
-                            viewport_y * viewport.cell_size,
-                            viewport.cell_size,
-                            viewport.cell_size,
-                        ),
-                    )
-                    # Draw white cell if alive
-                    if state[grid_x, grid_y]:
-                        pygame.draw.rect(
-                            self._screen,
-                            "white",
-                            pygame.Rect(
-                                viewport_x * viewport.cell_size,
-                                viewport_y * viewport.cell_size,
-                                viewport.cell_size,
-                                viewport.cell_size,
-                            ),
-                        )
+        # Draw only live cells (more efficient than checking every cell)
+        for grid_x, grid_y in state.get_live_cells():
+            # Check if the live cell is within the viewport
+            viewport_x = grid_x - viewport.viewport_x
+            viewport_y = grid_y - viewport.viewport_y
+
+            if (0 <= viewport_x < viewport_cells_width and
+                0 <= viewport_y < viewport_cells_height):
+                # Draw white cell
+                pygame.draw.rect(
+                    self._screen,
+                    "white",
+                    pygame.Rect(
+                        viewport_x * viewport.cell_size,
+                        viewport_y * viewport.cell_size,
+                        viewport.cell_size,
+                        viewport.cell_size,
+                    ),
+                )
 
         # Render FPS counter in top right corner with monospaced font
         font = pygame.font.SysFont("monospace", 24, bold=True)

@@ -1,5 +1,6 @@
 from unittest.mock import Mock, patch
 
+import pygame
 
 from pycgol.ui._renderer import Renderer
 from pycgol.ui._viewport_manager import ViewportManager
@@ -76,6 +77,9 @@ class TestRenderer:
     @patch("pycgol.ui._renderer.pygame")
     def test_render_draws_black_background_for_cells(self, mock_pygame):
         """Test that in-bounds cells have black background."""
+        # Use real pygame.Rect so we can inspect width/height
+        mock_pygame.Rect = pygame.Rect
+
         mock_screen = Mock()
         mock_screen.get_width.return_value = 100
         mock_screen.get_height.return_value = 100
@@ -95,9 +99,12 @@ class TestRenderer:
             if len(c.args) >= 2 and c.args[1] == "black"
         ]
 
-        # Should draw black background for all visible cells
-        # 10x10 cells visible
-        assert len(black_calls) == 100
+        # Should draw one black rectangle for the in-bounds area
+        assert len(black_calls) == 1
+        # Verify it covers the full viewport (10x10 cells = 100x100 pixels)
+        black_rect = black_calls[0].args[2]
+        assert black_rect.width == 100
+        assert black_rect.height == 100
 
     @patch("pycgol.ui._renderer.pygame.display")
     @patch("pycgol.ui._renderer.pygame.font")
@@ -135,6 +142,9 @@ class TestRenderer:
     @patch("pycgol.ui._renderer.pygame")
     def test_render_skips_out_of_bounds_cells(self, mock_pygame):
         """Test that cells outside grid bounds are not drawn."""
+        # Use real pygame.Rect so we can inspect width/height
+        mock_pygame.Rect = pygame.Rect
+
         mock_screen = Mock()
         mock_screen.get_width.return_value = 100
         mock_screen.get_height.return_value = 100
@@ -148,16 +158,19 @@ class TestRenderer:
 
         renderer.render(state, viewport)
 
-        # Should only draw black backgrounds for cells within grid
+        # Should only draw one black rectangle for cells within grid
         # Grid is 5x5, but viewport is 10x10
-        # Should only draw 5x5 = 25 black backgrounds
+        # Black rectangle should only cover 5x5 cells = 50x50 pixels
         black_calls = [
             c
             for c in mock_pygame.draw.rect.call_args_list
             if len(c.args) >= 2 and c.args[1] == "black"
         ]
 
-        assert len(black_calls) == 25
+        assert len(black_calls) == 1
+        black_rect = black_calls[0].args[2]
+        assert black_rect.width == 50
+        assert black_rect.height == 50
 
     @patch("pycgol.ui._renderer.pygame")
     def test_render_draws_fps_counter(self, mock_pygame):
