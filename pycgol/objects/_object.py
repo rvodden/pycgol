@@ -1,5 +1,5 @@
 from abc import ABC
-from ..state import StateInterface
+from ..state import State
 
 
 class Object(ABC):
@@ -85,8 +85,8 @@ class Object(ABC):
         return cells
 
     def place(
-        self, position: tuple[int, int], state: StateInterface, rotation: int = 0
-    ) -> StateInterface:
+        self, position: tuple[int, int], state: State, rotation: int = 0
+    ) -> State:
         """
         Place the object at the given position with optional rotation.
 

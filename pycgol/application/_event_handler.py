@@ -6,7 +6,7 @@ import pygame
 import pygame_gui
 
 from ..ui._ui import UI
-from ..state import StateInterface
+from ..state import State
 from ._game_loop import GameLoop
 
 
@@ -67,7 +67,7 @@ class EventHandler:
         """
         self._fps_limit_toggle_callback = callback
 
-    def handle_event(self, event: pygame.event.Event, state: StateInterface) -> bool:
+    def handle_event(self, event: pygame.event.Event, state: State) -> bool:
         """
         Handle a single pygame event.
 
@@ -129,7 +129,7 @@ class EventHandler:
         """Handle mouse motion events."""
         self._ui.update_drag(event.pos)
 
-    def _handle_mouse_wheel(self, event: pygame.event.Event, state: StateInterface) -> None:
+    def _handle_mouse_wheel(self, event: pygame.event.Event, state: State) -> None:
         """Handle mouse wheel events."""
         if not self._ui.has_help_popup():
             mouse_pos = pygame.mouse.get_pos()

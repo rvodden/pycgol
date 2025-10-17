@@ -8,7 +8,7 @@ Conway's Game of Life Rules:
 """
 
 from abc import ABC, abstractmethod
-from ..state import StateInterface
+from ..state import State
 
 
 class Engine(ABC):
@@ -20,11 +20,11 @@ class Engine(ABC):
 
     # Optional: declare preferred state type for this engine
     # Set to None if engine works equally well with any state type
-    preferred_state_type: type[StateInterface] | None = None
+    preferred_state_type: type[State] | None = None
 
     @classmethod
     @abstractmethod
-    def next_state(cls, state: StateInterface) -> StateInterface:
+    def next_state(cls, state: State) -> State:
         """
         Calculate the next generation of the Game of Life.
 
@@ -37,7 +37,7 @@ class Engine(ABC):
         pass
 
     @classmethod
-    def optimize_state(cls, state: StateInterface) -> StateInterface:
+    def optimize_state(cls, state: State) -> State:
         """
         Convert state to preferred type if beneficial.
 

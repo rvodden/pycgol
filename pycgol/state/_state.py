@@ -1,113 +1,96 @@
-"""Game state storage implementations."""
+"""Abstract interface for game state storage."""
 
-from ._state_interface import StateInterface
+from abc import ABC, abstractmethod
 
 
-class DenseState(StateInterface):
-    """Dense 2D array storage for Game of Life state.
+class State(ABC):
+    """Abstract base class for Game of Life state storage.
 
-    Uses a 2D list to store every cell in the grid. This is memory-intensive
-    but provides O(1) access time and is efficient for dense patterns.
-
-    Memory: O(width × height)
-    Access: O(1)
-    Best for: Dense patterns (>30% alive cells)
+    This interface allows different storage strategies (dense, sparse)
+    while maintaining a consistent API for engines and rendering.
     """
 
-    _cells: list[list[bool]]
-
-    def __init__(self, width: int, height: int):
-        """
-        Initialize a dense state grid.
-
-        Args:
-            width: Width of the grid (must be > 0)
-            height: Height of the grid (must be > 0)
-
-        Raises:
-            ValueError: If width or height is <= 0
-        """
-        self._cells = []
-        if width <= 0 or height <= 0:
-            raise ValueError(
-                "Grid cannot be empty, neither height nor width can be zero or less."
-            )
-
-        for _ in range(height):
-            self._cells.append([False] * width)
-
     @property
+    @abstractmethod
     def width(self) -> int:
         """Width of the game grid."""
-        return len(self._cells[0])
+        pass
 
     @property
+    @abstractmethod
     def height(self) -> int:
         """Height of the game grid."""
-        return len(self._cells)
+        pass
 
-    def _validate_bounds(self, index: tuple[int, int]) -> None:
-        """Validate that coordinates are within grid bounds."""
-        x, y = index
-        if not (0 <= x < self.width and 0 <= y < self.height):
-            raise ValueError(
-                f"({x}, {y}) is outside the bounds ({self.width}, {self.height})."
-            )
-
+    @abstractmethod
     def __getitem__(self, index: tuple[int, int]) -> bool:
-        """Get cell state at position (x, y)."""
-        self._validate_bounds(index)
-        x, y = index
-        return self._cells[y][x]
+        """
+        Get cell state at position (x, y).
 
+        Args:
+            index: Tuple of (x, y) coordinates
+
+        Returns:
+            True if cell is alive, False if dead
+
+        Raises:
+            ValueError: If coordinates are out of bounds
+        """
+        pass
+
+    @abstractmethod
     def __setitem__(self, index: tuple[int, int], value: bool) -> None:
-        """Set cell state at position (x, y)."""
-        self._validate_bounds(index)
-        x, y = index
-        self._cells[y][x] = value
+        """
+        Set cell state at position (x, y).
 
+        Args:
+            index: Tuple of (x, y) coordinates
+            value: True for alive, False for dead
+
+        Raises:
+            ValueError: If coordinates are out of bounds
+        """
+        pass
+
+    @abstractmethod
     def get_live_cells(self) -> set[tuple[int, int]]:
         """
         Get set of all live cell coordinates.
 
-        Scans entire grid to find live cells.
-        Complexity: O(width × height)
+        This method is crucial for sparse algorithms, allowing O(live cells)
+        iteration instead of O(grid size).
 
         Returns:
             Set of (x, y) tuples for all live cells
         """
-        live = set()
-        for y in range(self.height):
-            for x in range(self.width):
-                if self._cells[y][x]:
-                    live.add((x, y))
-        return live
+        pass
 
     @classmethod
-    def from_state(cls, other: StateInterface) -> "DenseState":
+    @abstractmethod
+    def from_state(cls, other: "State") -> "State":
         """
-        Create dense state from another state type.
+        Create instance of this state type from another state.
+
+        This enables conversion between state types (e.g., dense to sparse)
+        when engines switch.
 
         Args:
             other: Source state to convert from
 
         Returns:
-            New DenseState with same dimensions and live cells
+            New state of this type with same dimensions and live cells
         """
-        new_state = cls(other.width, other.height)
+        pass
 
-        # Try efficient conversion if possible
-        if hasattr(other, "get_live_cells"):
-            for x, y in other.get_live_cells():
-                new_state[x, y] = True
-        else:
-            # Fallback: scan entire grid
-            for y in range(other.height):
-                for x in range(other.width):
-                    new_state[x, y] = other[x, y]
+    @abstractmethod
+    def _validate_bounds(self, index: tuple[int, int]) -> None:
+        """
+        Validate that coordinates are within grid bounds.
 
-        return new_state
+        Args:
+            index: Tuple of (x, y) coordinates
 
-
-# Backward compatibility: State is an alias for DenseState
-State = DenseState
+        Raises:
+            ValueError: If coordinates are out of bounds
+        """
+        pass

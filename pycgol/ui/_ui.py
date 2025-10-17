@@ -3,7 +3,7 @@
 import pygame
 import pygame_gui
 
-from ..state import StateInterface
+from ..state import State
 from ._viewport_manager import ViewportManager
 from ._ui_components import UIComponents
 from ._renderer import Renderer
@@ -139,6 +139,6 @@ class UI:
         return self._components.has_help_popup()
 
     # Rendering delegation method
-    def render(self, state: StateInterface, fps: float = 0.0) -> None:
+    def render(self, state: State, fps: float = 0.0) -> None:
         """Render the game state and UI."""
         self._renderer.render(state, self._viewport, fps)

@@ -1,7 +1,7 @@
 """Sparse engine implementation for Game of Life."""
 
 from ._engine import Engine
-from ..state import StateInterface, SparseState
+from ..state import State, SparseState
 
 
 class SparseEngine(Engine):
@@ -19,7 +19,7 @@ class SparseEngine(Engine):
     preferred_state_type = SparseState
 
     @classmethod
-    def next_state(cls, state: StateInterface) -> StateInterface:
+    def next_state(cls, state: State) -> State:
         """Calculate next generation using sparse algorithm."""
         # Optimize to sparse state if needed
         state = cls.optimize_state(state)

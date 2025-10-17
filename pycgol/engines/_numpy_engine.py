@@ -2,7 +2,7 @@ import numpy as np
 from scipy import signal
 
 from ._engine import Engine
-from ..state import StateInterface, DenseState
+from ..state import State, DenseState
 
 
 class NumpyEngine(Engine):
@@ -19,7 +19,7 @@ class NumpyEngine(Engine):
     _KERNEL = np.array([[1, 1, 1], [1, 0, 1], [1, 1, 1]], dtype=np.int8)
 
     @classmethod
-    def next_state(cls, state: StateInterface) -> StateInterface:
+    def next_state(cls, state: State) -> State:
         # Optimize to dense state if needed
         state = cls.optimize_state(state)
 

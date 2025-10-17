@@ -3,7 +3,7 @@
 import pytest
 
 from pycgol.engines import Engine, LoopEngine, NumpyEngine, EngineRegistry
-from pycgol.state import StateInterface as State, DenseState
+from pycgol.state import State as State, DenseState
 
 
 class DummyEngine(Engine):

@@ -1,5 +1,5 @@
 from ._engine import Engine
-from ..state import StateInterface
+from ..state import State
 
 
 class LoopEngine(Engine):
@@ -34,13 +34,13 @@ class LoopEngine(Engine):
         return [(x, y) for (x, y) in retval if 0 <= x < width and 0 <= y < height]
 
     @classmethod
-    def _alive_neighbours(cls, cell: tuple[int, int], state: StateInterface) -> int:
+    def _alive_neighbours(cls, cell: tuple[int, int], state: State) -> int:
         neighbours = cls._neighbours(cell, state.width, state.height)
         alive_neighbours = [state[x, y] for x, y in neighbours]
         return sum(alive_neighbours)
 
     @classmethod
-    def _next_cell_state(cls, cell: tuple[int, int], state: StateInterface) -> bool:
+    def _next_cell_state(cls, cell: tuple[int, int], state: State) -> bool:
         x, y = cell
         alive_neighbours = cls._alive_neighbours(cell, state)
         if state[x, y]:  # cell is alive
@@ -53,7 +53,7 @@ class LoopEngine(Engine):
             return False
 
     @classmethod
-    def next_state(cls, state: StateInterface) -> StateInterface:
+    def next_state(cls, state: State) -> State:
         # Preserve input state type - create new state of same type
         next_state_type = type(state)
         next_state = next_state_type(state.width, state.height)

@@ -1,6 +1,6 @@
 from ._sparse_state import SparseState
-from ._state import DenseState
-from ._state_interface import StateInterface
+from ._dense_state import DenseState
+from ._state import State
 
 
-__all__ = ["SparseState", "DenseState", "StateInterface"]
+__all__ = ["SparseState", "DenseState", "State"]

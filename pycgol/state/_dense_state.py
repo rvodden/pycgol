@@ -1,22 +1,24 @@
-"""Sparse state storage implementation."""
+"""Game state storage implementations."""
 
 from ._state import State
 
 
-class SparseState(State):
-    """Sparse storage using set of live cell coordinates.
+class DenseState(State):
+    """Dense 2D array storage for Game of Life state.
 
-    Only stores coordinates of live cells, making it memory-efficient for
-    sparse patterns. Dead cells are implicitly represented by absence.
+    Uses a 2D list to store every cell in the grid. This is memory-intensive
+    but provides O(1) access time and is efficient for dense patterns.
 
-    Memory: O(live cells)
-    Access: O(1) with hash lookup
-    Best for: Sparse patterns (<10% alive cells)
+    Memory: O(width × height)
+    Access: O(1)
+    Best for: Dense patterns (>30% alive cells)
     """
+
+    _cells: list[list[bool]]
 
     def __init__(self, width: int, height: int):
         """
-        Initialize a sparse state grid.
+        Initialize a dense state grid.
 
         Args:
             width: Width of the grid (must be > 0)
@@ -25,24 +27,24 @@ class SparseState(State):
         Raises:
             ValueError: If width or height is <= 0
         """
+        self._cells = []
         if width <= 0 or height <= 0:
             raise ValueError(
                 "Grid cannot be empty, neither height nor width can be zero or less."
             )
 
-        self._width = width
-        self._height = height
-        self._live_cells: set[tuple[int, int]] = set()
+        for _ in range(height):
+            self._cells.append([False] * width)
 
     @property
     def width(self) -> int:
         """Width of the game grid."""
-        return self._width
+        return len(self._cells[0])
 
     @property
     def height(self) -> int:
         """Height of the game grid."""
-        return self._height
+        return len(self._cells)
 
     def _validate_bounds(self, index: tuple[int, int]) -> None:
         """Validate that coordinates are within grid bounds."""
@@ -53,59 +55,59 @@ class SparseState(State):
             )
 
     def __getitem__(self, index: tuple[int, int]) -> bool:
-        """
-        Get cell state at position (x, y).
-
-        Complexity: O(1) average case (hash lookup)
-        """
+        """Get cell state at position (x, y)."""
         self._validate_bounds(index)
-        return index in self._live_cells
+        x, y = index
+        return self._cells[y][x]
 
     def __setitem__(self, index: tuple[int, int], value: bool) -> None:
-        """
-        Set cell state at position (x, y).
-
-        Complexity: O(1) average case (hash set operations)
-        """
+        """Set cell state at position (x, y)."""
         self._validate_bounds(index)
-        if value:
-            self._live_cells.add(index)
-        else:
-            self._live_cells.discard(index)
+        x, y = index
+        self._cells[y][x] = value
 
     def get_live_cells(self) -> set[tuple[int, int]]:
         """
         Get set of all live cell coordinates.
 
-        This is O(1) for sparse state since we already store the set.
+        Scans entire grid to find live cells.
+        Complexity: O(width × height)
 
         Returns:
-            Copy of the set of (x, y) tuples for all live cells
+            Set of (x, y) tuples for all live cells
         """
-        return self._live_cells.copy()
+        live = set()
+        for y in range(self.height):
+            for x in range(self.width):
+                if self._cells[y][x]:
+                    live.add((x, y))
+        return live
 
     @classmethod
-    def from_state(cls, other: State) -> "SparseState":
+    def from_state(cls, other: State) -> "DenseState":
         """
-        Create sparse state from another state type.
+        Create dense state from another state type.
 
         Args:
             other: Source state to convert from
 
         Returns:
-            New SparseState with same dimensions and live cells
+            New DenseState with same dimensions and live cells
         """
         new_state = cls(other.width, other.height)
 
-        # Efficient conversion: only copy live cells
+        # Try efficient conversion if possible
         if hasattr(other, "get_live_cells"):
             for x, y in other.get_live_cells():
                 new_state[x, y] = True
         else:
-            # Fallback: scan entire grid (slow for dense states)
+            # Fallback: scan entire grid
             for y in range(other.height):
                 for x in range(other.width):
-                    if other[x, y]:
-                        new_state[x, y] = True
+                    new_state[x, y] = other[x, y]
 
         return new_state
+
+
+# Backward compatibility: State is an alias for DenseState
+State = DenseState
